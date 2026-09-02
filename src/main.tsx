@@ -137,8 +137,10 @@ function usePageMotion<T extends HTMLElement>(dependencies: React.DependencyList
     const context = gsap.context(() => {
       const heroIntro = gsap.utils.toArray<HTMLElement>('.hero-kicker, .hero-copy h1, .hero-copy > p, .hero-actions, .hero-proof', node);
       const heroVisual = gsap.utils.toArray<HTMLElement>('.hero-product, .hero-float', node);
+      const pageIntro = gsap.utils.toArray<HTMLElement>('.page-kicker, .standalone-hero h1, .standalone-hero > p, .page-actions, .page-stat', node);
       if (heroIntro.length) gsap.fromTo(heroIntro, { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.07, ease: 'power3.out', delay: 0.1 });
       if (heroVisual.length) gsap.fromTo(heroVisual, { y: 28, scale: 0.96, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 1, stagger: 0.12, ease: 'power3.out', delay: 0.25 });
+      if (pageIntro.length) gsap.fromTo(pageIntro, { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.75, stagger: 0.08, ease: 'power3.out', delay: 0.08 });
 
       gsap.utils.toArray<HTMLElement>('.js-reveal').forEach((element) => {
         gsap.fromTo(
@@ -200,7 +202,7 @@ function WhatsApp() {
   );
 }
 
-function Header({ count, lang, setLang }: { count: number; lang: Lang; setLang: (x: Lang) => void }) {
+function Header({ count, lang, setLang, onSearch, onCartOpen }: { count: number; lang: Lang; setLang: (x: Lang) => void; onSearch: () => void; onCartOpen: () => void }) {
   const [open, setOpen] = useState(false);
   const t = copy[lang];
 
@@ -215,14 +217,14 @@ function Header({ count, lang, setLang }: { count: number; lang: Lang; setLang: 
           <Link to="/" className="brand" onClick={() => setOpen(false)}>tapless.ec<span>·</span></Link>
           <nav className={open ? 'open' : ''} aria-label="Navegación principal">
             <Link to="/productos" onClick={() => setOpen(false)}>{t.products}</Link>
-            <a href={`${siteBase}#como-funciona`} onClick={() => setOpen(false)}>Cómo funciona</a>
-            <a href={`${siteBase}#opiniones`} onClick={() => setOpen(false)}>{t.reviews}</a>
-            <a href={`${siteBase}#faq`} onClick={() => setOpen(false)}>{t.faq}</a>
+            <Link to="/como-funciona" onClick={() => setOpen(false)}>Cómo funciona</Link>
+            <Link to="/opiniones" onClick={() => setOpen(false)}>{t.reviews}</Link>
+            <Link to="/faq" onClick={() => setOpen(false)}>{t.faq}</Link>
           </nav>
           <div className="nav-actions">
             <button className="lang" onClick={() => setLang(lang === 'es' ? 'en' : 'es')} aria-label="Cambiar idioma">{lang === 'es' ? 'EN' : 'ES'}</button>
-            <Link to="/productos" className="nav-search" aria-label="Buscar productos"><Search size={18} /></Link>
-            <Link to="/carrito" className="bag" aria-label={t.cart}><ShoppingBag size={18} />{count > 0 && <b>{count}</b>}</Link>
+            <button className="nav-search" onClick={onSearch} aria-label="Buscar productos"><Search size={18} /></button>
+            <Link to="/carrito" className="bag" aria-label={t.cart} onClick={(event) => { event.preventDefault(); onCartOpen(); }}><ShoppingBag size={18} />{count > 0 && <b>{count}</b>}</Link>
             <a className="nav-talk" href={wa}>{t.contact}<ArrowRight size={14} /></a>
             <button className="mobile-menu" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={21} /> : <Menu size={21} />}</button>
           </div>
@@ -232,12 +234,46 @@ function Header({ count, lang, setLang }: { count: number; lang: Lang; setLang: 
   );
 }
 
+function SearchModal({ open, items, onClose, onQuickAdd }: { open: boolean; items: P[]; onClose: () => void; onQuickAdd: (p: P) => void }) {
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!open) return undefined;
+    setQuery('');
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  const results = items.filter((item) => `${item.name} ${item.shortDescription}`.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><section className="search-modal" role="dialog" aria-modal="true" aria-labelledby="search-title"><div className="modal-head"><div><span className="eyebrow">Explora Tapless</span><h2 id="search-title">¿Qué estás buscando?</h2></div><button className="modal-close" onClick={onClose} aria-label="Cerrar búsqueda"><X size={18} /></button></div><label className="modal-search"><Search size={20} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Busca por producto, pack o uso..." /></label><div className="search-result-count">{query ? `${results.length} resultados` : 'Colección destacada'}</div><div className="search-results">{results.length ? results.map((item) => <div className="search-result" key={item.id}><Link to={`/producto/${item.slug}`} onClick={onClose}><img src={item.images[0]} alt="" /><span><strong>{item.name}</strong><small>{item.shortDescription}</small></span></Link><div><b>{money(item.price)}</b><button onClick={() => { onQuickAdd(item); onClose(); }}>Añadir <Plus size={13} /></button></div></div>) : <div className="search-empty"><Search size={19} /><p>No encontramos coincidencias. Prueba con otra palabra.</p></div>}</div><Link to="/productos" className="modal-all" onClick={onClose}>Ver toda la colección <ArrowRight size={15} /></Link></section></div>;
+}
+
+function CartDrawer({ open, cart, setCart, onClose }: { open: boolean; cart: Item[]; setCart: React.Dispatch<React.SetStateAction<Item[]>>; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.body.classList.add('drawer-open');
+    window.addEventListener('keydown', onKeyDown);
+    return () => { document.body.classList.remove('drawer-open'); window.removeEventListener('keydown', onKeyDown); };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  const subtotal = cart.reduce((sum, item) => sum + item.p.price * item.qty, 0);
+  const shipping = subtotal >= 80 ? 0 : 8;
+  const count = cart.reduce((sum, item) => sum + item.qty, 0);
+
+  return <div className="drawer-shell" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><div className="drawer-head"><div><span className="eyebrow">Tu selección</span><h2 id="drawer-title">Carrito <small>{count}</small></h2></div><button className="modal-close" onClick={onClose} aria-label="Cerrar carrito"><X size={18} /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <div className="drawer-item" key={`${item.p.id}-${item.customization}`}><img src={item.p.images[0]} alt={item.p.name} /><div><h3>{item.p.name}</h3><p>{money(item.p.price)}</p>{item.customization && <small>{item.customization}</small>}<div className="drawer-item-bottom"><div className="quantity"><button aria-label="Restar" onClick={() => setCart((current) => current.map((line) => line.p.id === item.p.id && line.customization === item.customization ? { ...line, qty: Math.max(1, line.qty - 1) } : line))}><Minus size={12} /></button><span>{item.qty}</span><button aria-label="Sumar" onClick={() => setCart((current) => current.map((line) => line.p.id === item.p.id && line.customization === item.customization ? { ...line, qty: Math.min(line.p.stock, line.qty + 1) } : line))}><Plus size={12} /></button></div><button className="drawer-remove" onClick={() => setCart((current) => current.filter((line) => !(line.p.id === item.p.id && line.customization === item.customization)))}>Eliminar</button></div></div><strong>{money(item.p.price * item.qty)}</strong></div>)}</div><div className="drawer-footer"><div className="drawer-shipping"><span>{shipping ? `Envío ${money(shipping)}` : 'Envío gratis'}</span><span>Subtotal {money(subtotal)}</span></div><div className="drawer-total"><span>Total estimado</span><strong>{money(subtotal + shipping)}</strong></div><Link to="/carrito" className="button dark drawer-checkout" onClick={onClose}>Ir al carrito <ArrowRight size={16} /></Link><small>El pago y la coordinación se confirman por WhatsApp.</small></div></> : <div className="drawer-empty"><div className="empty-bag"><ShoppingBag size={22} /></div><h3>Tu carrito está vacío</h3><p>Encuentra una pieza que haga más fácil pedir opiniones.</p><Link to="/productos" className="button dark" onClick={onClose}>Ver productos <ArrowRight size={15} /></Link></div>}</aside></div>;
+}
+
 function Footer() {
   return (
     <footer>
       <div className="wrap footer-main">
         <div className="footer-intro"><Link to="/" className="brand">tapless.ec<span>·</span></Link><p>Pequeños puntos de contacto.<br />Grandes señales de confianza.</p><a className="footer-cta" href={wa}>Hablar con Tapless <ArrowRight size={15} /></a></div>
-        <div className="footer-links"><div><strong>Explorar</strong><Link to="/productos">Productos</Link><a href={`${siteBase}#como-funciona`}>Cómo funciona</a><a href={`${siteBase}#opiniones`}>Opiniones</a></div><div><strong>Ayuda</strong><a href={wa}>WhatsApp</a><Link to="/politica-privacidad">Privacidad</Link><Link to="/terminos">Términos</Link></div><div><strong>Social</strong><a href="https://instagram.com/tapless.ec" target="_blank" rel="noreferrer">Instagram</a><a href="https://www.tiktok.com/@tapless.ec" target="_blank" rel="noreferrer">TikTok</a></div></div>
+        <div className="footer-links"><div><strong>Explorar</strong><Link to="/productos">Productos</Link><Link to="/como-funciona">Cómo funciona</Link><Link to="/opiniones">Opiniones</Link><Link to="/faq">Dudas frecuentes</Link></div><div><strong>Ayuda</strong><a href={wa}>WhatsApp</a><Link to="/politica-privacidad">Privacidad</Link><Link to="/terminos">Términos</Link></div><div><strong>Social</strong><a href="https://instagram.com/tapless.ec" target="_blank" rel="noreferrer">Instagram</a><a href="https://www.tiktok.com/@tapless.ec" target="_blank" rel="noreferrer">TikTok</a></div></div>
       </div>
       <div className="wrap footer-bottom"><div className="socials"><a href="https://instagram.com/tapless.ec" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram /></a><a href="https://www.tiktok.com/@tapless.ec" target="_blank" rel="noreferrer" aria-label="TikTok"><TikTok /></a><a href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp"><WhatsApp /></a></div><span>© 2026 Tapless · Ecuador</span><span>Hecho para negocios reales</span></div>
     </footer>
@@ -282,7 +318,23 @@ function Home({ items, lang, onQuickAdd }: { items: P[]; lang: Lang; onQuickAdd:
   const t = copy[lang];
   const heroProduct = items.find((item) => item.featured) || items[0];
   const featured = items.filter((item) => item.featured).slice(0, 4);
-  return <div ref={motionRoot} className="home-page">{heroProduct ? <section className="hero"><div className="hero-copy"><div className="hero-kicker"><span className="eyebrow">Placas NFC · tapless.ec</span><span className="hero-counter">Colección 2026 <span>↗</span></span></div><h1>{lang === 'es' ? <>Convierte cada visita en una <i>reseña.</i></> : <>Turn every visit into a <i>review.</i></>}</h1><p>{t.text}</p><div className="hero-actions"><Link className="button dark" to={`/producto/${heroProduct.slug}`}>{t.cta}<ArrowRight size={17} /></Link><a className="hero-secondary" href={`${siteBase}#como-funciona`}>Ver cómo funciona <span>↓</span></a></div><div className="hero-proof"><span className="proof-stars">★★★★★</span><span>Diseñado para negocios con algo que decir</span></div></div><div className="hero-stage"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-product"><img src={heroProduct.images[0]} alt={heroProduct.name} /></div><div className="hero-float hero-float-top"><Sparkles size={16} /><div><strong>Tu mejor primera impresión</strong><small>Activación rápida</small></div></div><div className="hero-float hero-float-bottom"><span className="nfc-symbol">⌁</span><div><strong>Toca. Opina. Crece.</strong><small>{heroProduct.name}</small></div></div><span className="hero-stage-code">TAPLESS / 001</span></div></section> : <section className="empty catalog-empty"><h1>Catálogo en actualización</h1></section>}<TrustStrip /><section className="featured section wrap js-reveal" id="productos"><div className="section-label-row"><div><span className="eyebrow">La colección</span><h2>Una placa. <i>Más confianza.</i></h2></div><Link to="/productos" className="text-link">Ver todos los productos <ArrowRight size={16} /></Link></div>{featured.length ? <Grid items={featured} onQuickAdd={onQuickAdd} /> : <div className="empty">No hay productos activos disponibles.</div>}</section><section className="dark-banner wrap js-reveal"><div className="dark-banner-copy"><span className="eyebrow">Hecho para el mundo real</span><h2>Tu negocio ya tiene<br /><i>una historia.</i></h2><p>Haz que sea fácil para tus clientes contarla. Una pieza bella, un toque y la conversación sigue.</p><a href={wa} className="button light">Hablemos <ArrowRight size={17} /></a></div><div className="dark-banner-art"><span>01</span><div className="signal-ring"><span>tap<br />here</span></div><small>TECNOLOGÍA NFC · SIN BATERÍA</small></div></section><HowItWorks /><Reviews /><section className="manifesto wrap js-reveal"><Sparkles size={23} /><h2>Pequeños gestos.<br /><i>Grandes señales.</i></h2><p>Una acción sencilla para que más personas conozcan tu negocio.</p><a href={wa} className="button light">Hablar por WhatsApp <ArrowRight size={17} /></a></section></div>;
+  return <div ref={motionRoot} className="home-page">{heroProduct ? <section className="hero"><div className="hero-copy"><div className="hero-kicker"><span className="eyebrow">Placas NFC · tapless.ec</span><span className="hero-counter">Colección 2026 <span>↗</span></span></div><h1>{lang === 'es' ? <>Convierte cada visita en una <i>reseña.</i></> : <>Turn every visit into a <i>review.</i></>}</h1><p>{t.text}</p><div className="hero-actions"><Link className="button dark" to={`/producto/${heroProduct.slug}`}>{t.cta}<ArrowRight size={17} /></Link><Link className="hero-secondary" to="/como-funciona">Ver cómo funciona <span>↓</span></Link></div><div className="hero-proof"><span className="proof-stars">★★★★★</span><span>Diseñado para negocios con algo que decir</span></div></div><div className="hero-stage"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-product"><img src={heroProduct.images[0]} alt={heroProduct.name} /></div><div className="hero-float hero-float-top"><Sparkles size={16} /><div><strong>Tu mejor primera impresión</strong><small>Activación rápida</small></div></div><div className="hero-float hero-float-bottom"><span className="nfc-symbol">⌁</span><div><strong>Toca. Opina. Crece.</strong><small>{heroProduct.name}</small></div></div><span className="hero-stage-code">TAPLESS / 001</span></div></section> : <section className="empty catalog-empty"><h1>Catálogo en actualización</h1></section>}<TrustStrip /><section className="featured section wrap js-reveal" id="productos"><div className="section-label-row"><div><span className="eyebrow">La colección</span><h2>Una placa. <i>Más confianza.</i></h2></div><Link to="/productos" className="text-link">Ver todos los productos <ArrowRight size={16} /></Link></div>{featured.length ? <Grid items={featured} onQuickAdd={onQuickAdd} /> : <div className="empty">No hay productos activos disponibles.</div>}</section><section className="dark-banner wrap js-reveal"><div className="dark-banner-copy"><span className="eyebrow">Hecho para el mundo real</span><h2>Tu negocio ya tiene<br /><i>una historia.</i></h2><p>Haz que sea fácil para tus clientes contarla. Una pieza bella, un toque y la conversación sigue.</p><a href={wa} className="button light">Hablemos <ArrowRight size={17} /></a></div><div className="dark-banner-art"><span>01</span><div className="signal-ring"><span>tap<br />here</span></div><small>TECNOLOGÍA NFC · SIN BATERÍA</small></div></section><HowItWorks /><Reviews /><section className="manifesto wrap js-reveal"><Sparkles size={23} /><h2>Pequeños gestos.<br /><i>Grandes señales.</i></h2><p>Una acción sencilla para que más personas conozcan tu negocio.</p><a href={wa} className="button light">Hablar por WhatsApp <ArrowRight size={17} /></a></section></div>;
+}
+
+function HowPage() {
+  const root = usePageMotion<HTMLDivElement>();
+  const steps = [['01', 'Toca', 'Tu cliente acerca su teléfono a la placa.'], ['02', 'Descubre', 'El enlace correcto se abre al instante.'], ['03', 'Comparte', 'Una opinión que ayuda a tu negocio a crecer.']];
+  return <main ref={root} className="dedicated-page page-motion"><section className="standalone-hero wrap"><div><span className="eyebrow page-kicker">La experiencia Tapless</span><h1>Un gesto pequeño.<br /><i>Se siente grande.</i></h1><p>Una experiencia directa, sin descargas y sin interrumpir el momento que estás construyendo con tus clientes.</p><div className="page-actions"><Link to="/productos" className="button dark">Ver la colección <ArrowRight size={16} /></Link><span className="page-stat"><strong>0</strong><small>apps necesarias</small></span></div></div><div className="standalone-visual"><div className="visual-core">NFC</div><span>ACERCA<br />TU TELÉFONO</span><small>TAPLESS / 02</small></div></section><section className="dedicated-flow wrap js-reveal"><div className="section-label-row"><div><span className="eyebrow">Así de sencillo</span><h2>La tecnología<br /><i>desaparece.</i></h2></div><p>Solo queda la conversación entre tu negocio y la persona que acaba de vivirlo.</p></div><div className="flow-cards">{steps.map(([number, title, text]) => <div className="flow-card" key={number}><span>{number}</span><div className="flow-icon">{title === 'Toca' ? '⌁' : title === 'Descubre' ? '↗' : '★'}</div><h3>{title}</h3><p>{text}</p></div>)}</div></section><section className="dedicated-callout wrap js-reveal"><span className="eyebrow">Para cada punto de contacto</span><h2>Tu barra. Tu mesa. Tu recepción.<br /><i>Tu manera de hacer las cosas.</i></h2><Link to="/productos" className="text-link">Encuentra tu pieza <ArrowRight size={16} /></Link></section></main>;
+}
+
+function ReviewsPage() {
+  const root = usePageMotion<HTMLDivElement>();
+  return <main ref={root} className="dedicated-page page-motion"><section className="standalone-hero review-standalone wrap"><div><span className="eyebrow page-kicker">Prueba social, hecha humana</span><h1>La confianza<br /><i>se comparte.</i></h1><p>Cuando la experiencia es buena, contarlo también debería serlo. Tapless hace que ese momento sea fácil.</p></div><div className="review-stat-board"><div><strong>★★★★★</strong><span>Opiniones que empiezan con un toque</span></div><div><strong>01</strong><span>pieza para cada negocio</span></div></div></section><Reviews /><section className="quote-grid wrap js-reveal"><div><span className="eyebrow">La idea detrás</span><h2>Diseñado para que<br /><i>te elijan otra vez.</i></h2></div><p>No medimos la confianza en botones. La diseñamos en cada detalle: una pieza que se entiende, una acción que fluye y una experiencia que se queda.</p></section></main>;
+}
+
+function FAQPage() {
+  const root = usePageMotion<HTMLDivElement>();
+  return <main ref={root} className="dedicated-page page-motion"><section className="standalone-hero faq-standalone wrap"><div><span className="eyebrow page-kicker">Centro de ayuda</span><h1>Preguntas claras.<br /><i>Decisiones fáciles.</i></h1><p>Todo lo que necesitas saber antes de elegir la pieza que acompañará a tu negocio.</p><a href={wa} className="text-link">¿No encuentras lo que buscas? <ArrowRight size={16} /></a></div><div className="faq-symbol"><span>?</span><small>TAPLESS / HELP</small></div></section><FAQ /><section className="support-card wrap js-reveal"><div><span className="eyebrow">¿Hablamos?</span><h2>Tu pregunta merece<br /><i>una respuesta.</i></h2></div><a className="button light" href={wa}>Escribir por WhatsApp <ArrowRight size={16} /></a></section></main>;
 }
 
 function Listing({ items, category, onQuickAdd }: { items: P[]; category?: string; onQuickAdd: (p: P) => void }) {
@@ -345,6 +397,8 @@ function App() {
   const [cart, setCart] = useState<Item[]>(() => { try { return JSON.parse(localStorage.getItem('tapless-cart') || '[]'); } catch { return []; } });
   const [lang, setLang] = useState<Lang>('es');
   const [toast, setToast] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
   useEffect(() => localStorage.setItem('tapless-cart', JSON.stringify(cart)), [cart]);
   useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
@@ -352,7 +406,7 @@ function App() {
   const visible = items.filter(active);
   const count = cart.reduce((sum, item) => sum + item.qty, 0);
   const total = cart.reduce((sum, item) => sum + item.p.price * item.qty, 0);
-  return <><RouteMotion /><Header count={count} lang={lang} setLang={setLang} />{error && <div className="catalog-notice">{error}</div>}{loading ? <main className="empty listing"><p>Cargando catálogo…</p></main> : <Routes><Route path="/" element={<><Home items={visible} lang={lang} onQuickAdd={(product) => add(product, 1, '')} /><FAQ /><a className="whatsapp-float" href={wa} aria-label="WhatsApp"><WhatsApp /></a></>} /><Route path="/productos" element={<Listing items={visible} onQuickAdd={(product) => add(product, 1, '')} />} /><Route path="/categoria/:slug" element={<CategoryRoute items={visible} onQuickAdd={(product) => add(product, 1, '')} />} /><Route path="/producto/:slug" element={<Detail items={visible} onAdd={add} cartCount={count} cartTotal={total} />} /><Route path="/carrito" element={<Cart cart={cart} setCart={setCart} />} /><Route path="/admin/*" element={<Admin items={items} setItems={setItems} />} /><Route path="/politica-privacidad" element={<Legal kind="privacy" />} /><Route path="/terminos" element={<Legal kind="terms" />} /></Routes>}{<Footer />}{toast && <div className="toast" role="status"><Check size={16} />{toast}<Link to="/carrito">Ver carrito</Link></div>}</>;
+  return <><RouteMotion /><Header count={count} lang={lang} setLang={setLang} onSearch={() => setSearchOpen(true)} onCartOpen={() => setCartOpen(true)} />{error && <div className="catalog-notice">{error}</div>}{loading ? <main className="empty listing"><p>Cargando catálogo…</p></main> : <Routes><Route path="/" element={<><Home items={visible} lang={lang} onQuickAdd={(product) => add(product, 1, '')} /><FAQ /><a className="whatsapp-float" href={wa} aria-label="WhatsApp"><WhatsApp /></a></>} /><Route path="/productos" element={<Listing items={visible} onQuickAdd={(product) => add(product, 1, '')} />} /><Route path="/categoria/:slug" element={<CategoryRoute items={visible} onQuickAdd={(product) => add(product, 1, '')} />} /><Route path="/como-funciona" element={<HowPage />} /><Route path="/opiniones" element={<ReviewsPage />} /><Route path="/faq" element={<FAQPage />} /><Route path="/producto/:slug" element={<Detail items={visible} onAdd={add} cartCount={count} cartTotal={total} />} /><Route path="/carrito" element={<Cart cart={cart} setCart={setCart} />} /><Route path="/admin/*" element={<Admin items={items} setItems={setItems} />} /><Route path="/politica-privacidad" element={<Legal kind="privacy" />} /><Route path="/terminos" element={<Legal kind="terms" />} /></Routes>}{<Footer />}{toast && <div className="toast" role="status"><Check size={16} />{toast}<Link to="/carrito">Ver carrito</Link></div>}<SearchModal open={searchOpen} items={visible} onClose={() => setSearchOpen(false)} onQuickAdd={(product) => add(product, 1, '')} /><CartDrawer open={cartOpen} cart={cart} setCart={setCart} onClose={() => setCartOpen(false)} /></>;
 }
 
 createRoot(document.getElementById('root')!).render(<BrowserRouter basename={window.location.pathname.startsWith('/Web_Tag') ? '/Web_Tag' : ''}><App /></BrowserRouter>);
