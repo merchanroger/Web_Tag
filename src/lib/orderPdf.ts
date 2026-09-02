@@ -78,8 +78,8 @@ export async function createOrderPdf(data: OrderPdfData) {
     const scale = Math.min(140 / logo.width, 37 / logo.height);
     page.drawImage(logo, { x: margin + 13, y: PAGE_HEIGHT - 103, width: logo.width * scale, height: logo.height * scale });
   }
-  page.drawText('COMPROBANTE DE PEDIDO', { x: 365, y: PAGE_HEIGHT - 77, size: 9, font: bold, color: colors.acid });
-  page.drawText(`Orden ${data.orderId}`, { x: 365, y: PAGE_HEIGHT - 96, size: 11, font: bold, color: colors.white });
+  page.drawText('PROFORMA DE PEDIDO', { x: 365, y: PAGE_HEIGHT - 77, size: 9, font: bold, color: colors.acid });
+  page.drawText(`N.º de proforma ${data.orderId}`, { x: 365, y: PAGE_HEIGHT - 96, size: 11, font: bold, color: colors.white });
   page.drawText(data.date, { x: 365, y: PAGE_HEIGHT - 115, size: 8.5, font: regular, color: colors.mutedLight });
 
   let y = PAGE_HEIGHT - 205;
@@ -119,15 +119,16 @@ export async function createOrderPdf(data: OrderPdfData) {
     page.drawText(value, { x: 462, y, size: 9.5, font: bold, color: colors.ink });
     y -= 19;
   });
-  page.drawRectangle({ x: 338, y: y - 12, width: PAGE_WIDTH - margin - 338, height: 45, color: colors.ink });
-  page.drawText('TOTAL A CONFIRMAR', { x: 351, y: y + 7, size: 8, font: bold, color: colors.acid });
-  page.drawText(data.total, { x: 462, y: y + 6, size: 14, font: bold, color: colors.white });
+  const totalY = y - 48;
+  page.drawRectangle({ x: 338, y: totalY, width: PAGE_WIDTH - margin - 338, height: 45, color: colors.ink });
+  page.drawText('TOTAL A CONFIRMAR', { x: 351, y: totalY + 18, size: 8, font: bold, color: colors.acid });
+  page.drawText(data.total, { x: 462, y: totalY + 17, size: 14, font: bold, color: colors.white });
 
   const noteY = 165;
   page.drawRectangle({ x: margin, y: noteY, width: PAGE_WIDTH - margin * 2, height: 75, color: colors.soft });
   drawLabel(page, 'Estado del pedido', margin + 16, noteY + 52, bold, colors);
   page.drawText('Pendiente de confirmación por WhatsApp', { x: margin + 16, y: noteY + 34, size: 11, font: bold, color: colors.ink });
-  drawWrapped(page, 'Esta preforma resume tu pedido y no constituye una factura. Tapless confirmará disponibilidad, personalización, entrega y forma de pago por WhatsApp.', margin + 16, noteY + 18, PAGE_WIDTH - margin * 2 - 32, oblique, 8.5, colors.muted, 11);
+  drawWrapped(page, 'Esta proforma resume tu pedido y no constituye una factura. Tapless confirmará disponibilidad, personalización, entrega y forma de pago por WhatsApp.', margin + 16, noteY + 18, PAGE_WIDTH - margin * 2 - 32, oblique, 8.5, colors.muted, 11);
 
   page.drawLine({ start: { x: margin, y: 116 }, end: { x: PAGE_WIDTH - margin, y: 116 }, thickness: 1, color: colors.line });
   page.drawText('tapless.ec', { x: margin, y: 94, size: 10, font: bold, color: colors.ink });
@@ -136,7 +137,7 @@ export async function createOrderPdf(data: OrderPdfData) {
   page.drawText('Gracias por confiar en Tapless.', { x: 391, y: 78, size: 8.5, font: regular, color: colors.muted });
 
   const bytes = await pdf.save();
-  const filename = `tapless-pedido-${data.orderId.toLowerCase()}.pdf`;
+  const filename = `tapless-proforma-${data.orderId.toLowerCase()}.pdf`;
   return { blob: new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' }), filename };
 }
 
