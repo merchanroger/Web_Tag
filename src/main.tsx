@@ -147,7 +147,7 @@ function usePageMotion<T extends HTMLElement>(dependencies: React.DependencyList
       gsap.utils.toArray<HTMLElement>('.js-reveal').forEach((element) => {
         gsap.fromTo(
           element,
-          { y: 34, autoAlpha: 0 },
+          { y: 34, autoAlpha: 1 },
           {
             y: 0,
             autoAlpha: 1,
