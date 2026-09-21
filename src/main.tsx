@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
@@ -213,17 +213,17 @@ function Header({ count, lang, setLang, onSearch, onCartOpen }: { count: number;
   return (
     <>
       <div className="announcement">
-        <span>PLACAS NFC PARA NEGOCIOS QUE QUIEREN CRECER</span>
-        <span className="announcement-detail">Envío gratis desde $80 <span>·</span> Atención personalizada</span>
+        <span><span className="announcement-pulse" />PLACAS NFC PARA NEGOCIOS QUE QUIEREN CRECER</span>
+        <span className="announcement-detail">Envío gratis desde $80 <span>·</span> Atención personalizada <span>·</span> Ecuador</span>
       </div>
       <header className={isHome ? 'header header-dark' : 'header'}>
         <div className="nav wrap">
           <Link to="/" className="brand" onClick={() => setOpen(false)} aria-label="tapless.ec"><img src={logoSrc} alt="tapless.ec" /></Link>
           <nav className={open ? 'open' : ''} aria-label="Navegación principal">
-            <Link to="/productos" onClick={() => setOpen(false)}>{t.products}</Link>
-            <Link to="/como-funciona" onClick={() => setOpen(false)}>Cómo funciona</Link>
-            <Link to="/opiniones" onClick={() => setOpen(false)}>{t.reviews}</Link>
-            <Link to="/faq" onClick={() => setOpen(false)}>{t.faq}</Link>
+            <NavLink to="/productos" onClick={() => setOpen(false)}>{t.products}</NavLink>
+            <NavLink to="/como-funciona" onClick={() => setOpen(false)}>Cómo funciona</NavLink>
+            <NavLink to="/opiniones" onClick={() => setOpen(false)}>{t.reviews}</NavLink>
+            <NavLink to="/faq" onClick={() => setOpen(false)}>{t.faq}</NavLink>
           </nav>
           <div className="nav-actions">
             <button className="lang" onClick={() => setLang(lang === 'es' ? 'en' : 'es')} aria-label="Cambiar idioma">{lang === 'es' ? 'EN' : 'ES'}</button>
@@ -297,6 +297,19 @@ function TrustStrip() {
   return <section className="trust-strip"><div className="wrap trust-grid"><div><span className="trust-mark">01</span><div><strong>Sin apps</strong><small>Funciona al instante</small></div></div><div><span className="trust-mark">02</span><div><strong>Sin baterías</strong><small>Tecnología NFC</small></div></div><div><span className="trust-mark">03</span><div><strong>Listo para crecer</strong><small>Enlace actualizable</small></div></div><div className="trust-rating"><span>★★★★★</span><div><strong>Más confianza</strong><small>Empieza con una acción simple</small></div></div></div></section>;
 }
 
+function UseCases({ items }: { items: P[] }) {
+  const cases = [
+    { number: '01', title: 'Restaurantes', text: 'Convierte cada mesa en una invitación a volver.', product: items.find((item) => item.name.toLowerCase().includes('mesa')) || items[0] },
+    { number: '02', title: 'Salones y estudios', text: 'Pide feedback justo después de una gran experiencia.', product: items.find((item) => item.name.toLowerCase().includes('salon')) || items[1] },
+    { number: '03', title: 'Hoteles y clínicas', text: 'Haz que recomendarte sea tan sencillo como tocar.', product: items.find((item) => item.name.toLowerCase().includes('hotel')) || items[2] },
+  ];
+  return <section className="use-cases wrap js-reveal"><div className="section-label-row"><div><span className="eyebrow">Diseñado para tu mundo</span><h2>Una pieza para<br /><i>cada momento.</i></h2></div><p className="section-intro">No vendemos tecnología complicada. Creamos puntos de contacto que encajan con el ritmo real de tu negocio.</p></div><div className="use-case-grid">{cases.map((item) => <Link to={item.product ? `/producto/${item.product.slug}` : '/productos'} className="use-case-card" key={item.number}><div className="use-case-top"><span>{item.number}</span><ArrowRight size={17} /></div><div className="use-case-image">{item.product && <img src={item.product.images[0]} alt="" />}</div><div><h3>{item.title}</h3><p>{item.text}</p></div></Link>)}</div></section>;
+}
+
+function ServicePromise() {
+  return <section className="service-promise wrap js-reveal"><div className="promise-icon"><Check size={22} /></div><div><span className="eyebrow">Acompañamiento humano</span><h2>Tu pedido, claro desde<br /><i>el primer mensaje.</i></h2></div><div className="promise-copy"><p>Te ayudamos a elegir la pieza, preparar tu enlace y coordinar la entrega por WhatsApp. Sin formularios eternos, sin letra pequeña.</p><a className="text-link" href={wa}>Hablar con una persona <ArrowRight size={16} /></a></div></section>;
+}
+
 function HowItWorks() {
   const steps = [['01', 'Acerca tu teléfono', 'Tu cliente toca la placa con su móvil.'], ['02', 'Se abre tu enlace', 'La experiencia empieza sin apps ni QR.'], ['03', 'Comparte su opinión', 'Más feedback para seguir creciendo.']];
   return <section className="how wrap js-reveal" id="como-funciona"><div className="section-label-row"><span className="eyebrow">Cómo funciona</span><span className="section-note">Un gesto que se recuerda</span></div><div className="how-grid"><div className="how-heading"><h2>Menos fricción.<br /><i>Más conexión.</i></h2><p>Diseñamos cada pieza para que pedir una reseña sea una extensión natural de la experiencia de tu negocio.</p><Link to="/productos" className="text-link">Ver opciones <ArrowRight size={16} /></Link></div><div className="step-list">{steps.map(([number, title, text]) => <div className="step-row" key={number}><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div><ArrowRight size={16} /></div>)}</div></div></section>;
@@ -344,7 +357,9 @@ function Home({ items, lang, onQuickAdd }: { items: P[]; lang: Lang; onQuickAdd:
       </div>
     </section> : <section className="empty catalog-empty"><h1>Catálogo en actualización</h1></section>}
     <TrustStrip />
-    <section className="featured section wrap js-reveal" id="productos"><div className="section-label-row"><div><span className="eyebrow">La colección</span><h2>Una placa. <i>Más confianza.</i></h2></div><Link to="/productos" className="text-link">Ver todos los productos <ArrowRight size={16} /></Link></div>{featured.length ? <Grid items={featured} onQuickAdd={onQuickAdd} /> : <div className="empty">No hay productos activos disponibles.</div>}</section>
+    <section className="featured section wrap js-reveal" id="productos"><div className="section-label-row"><div><span className="eyebrow">La colección</span><h2>Una placa. <i>Más confianza.</i></h2></div><Link to="/productos" className="text-link">Ver todos los productos <ArrowRight size={16} /></Link></div>{featured.length ? <Grid items={featured} onQuickAdd={onQuickAdd} /> : <div className="empty">No hay productos activos disponibles.</div>}<div className="collection-note"><span><Sparkles size={15} /> Curada para negocios que cuidan los detalles</span><Link to="/productos">Explorar por categoría <ArrowRight size={14} /></Link></div></section>
+    <UseCases items={items} />
+    <ServicePromise />
     <section className="future-showcase wrap js-reveal"><div className="future-copy"><span className="eyebrow">La tecnología desaparece</span><h2>Todo lo que necesitas.<br /><i>Nada que explicar.</i></h2><p>Diseñamos el recorrido completo: una pieza que se ve bien, un enlace que abre al instante y un pedido que se coordina contigo.</p><div className="future-pills"><span>01 · NFC</span><span>02 · Sin apps</span><span>03 · Siempre activo</span></div><Link to="/como-funciona" className="text-link light-link">Conoce la experiencia <ArrowRight size={16} /></Link></div><div className="future-console"><div className="console-head"><span><i className="live-dot" /> SIGNAL / ACTIVE</span><span>NO BATTERY</span></div><div className="console-grid"><div className="console-radar"><span className="radar-ring radar-ring-one" /><span className="radar-ring radar-ring-two" /><span className="radar-core">⌁</span><i className="radar-sweep" /></div><div className="console-data"><small>NFC SYSTEM</small><strong>+∞</strong><span>posibilidades<br />para tu negocio</span></div></div><div className="console-foot"><span>tapless.ec</span><span>ECU / 593</span><span>READY TO GROW ↗</span></div></div></section>
     <section className="dark-banner wrap js-reveal"><div className="dark-banner-copy"><span className="eyebrow">Hecho para el mundo real</span><h2>Tu negocio ya tiene<br /><i>una historia.</i></h2><p>Haz que sea fácil para tus clientes contarla. Una pieza bella, un toque y la conversación sigue.</p><a href={wa} className="button light">Hablemos <ArrowRight size={17} /></a></div><div className="dark-banner-art"><span>01</span><div className="signal-ring" aria-hidden="true" /><img className="banner-logo" src={logoSrc} alt="tapless.ec" /><small>TECNOLOGÍA NFC · SIN BATERÍA</small></div></section>
     <HowItWorks /><Reviews /><section className="manifesto wrap js-reveal"><Sparkles size={23} /><h2>Pequeños gestos.<br /><i>Grandes señales.</i></h2><p>Una acción sencilla para que más personas conozcan tu negocio.</p><a href={wa} className="button light">Hablar por WhatsApp <ArrowRight size={17} /></a></section>
